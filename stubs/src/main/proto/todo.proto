@@ -1,0 +1,37 @@
+
+syntax = "proto3";
+
+package todo.app.grpc;
+
+option java_package = "todo.app.grpc";
+
+service TodoService {
+  rpc CreateTodo(Todo) returns (ID);
+  rpc GetTodo(ID) returns (Todo);
+  rpc UpdateTodo(Todo) returns (ID);
+  rpc DeleteTodo(ID) returns (ID);
+  //server side streaming method
+  rpc GetAllTodos(GetTodosRequest) returns (stream Todo);
+}
+
+message Todo {
+  string tod_id = 1;
+  string author_id = 2;
+  string title = 3;
+  string description = 4;
+  string created_at = 5;
+  enum TODO_STATUS {
+      CREATED = 0;
+      IN_PROGRESS = 1;
+      COMPLETED = 2;
+  }
+  TODO_STATUS status = 6;
+}
+message ID {
+  string todo_id = 1;
+}
+
+message GetTodosRequest {
+  optional int64 page = 1;
+  optional int64 limit = 2;
+}
