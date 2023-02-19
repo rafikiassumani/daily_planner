@@ -6,11 +6,58 @@
 
 plugins {
     id("daily_planner.kotlin-application-conventions")
+    kotlin("jvm") version "1.7.10"
+    application
+}
+
+repositories {
+    // Use Maven Central for resolving dependencies.
+    mavenCentral()
 }
 
 dependencies {
-    implementation("org.apache.commons:commons-text")
     implementation(project(":stubs"))
+    // This dependency is used by the application.
+    listOf(
+        "armeria",
+        "armeria-brave",
+        "armeria-grpc",
+        "armeria-jetty9",
+        "armeria-kafka",
+        "armeria-logback",
+        "armeria-retrofit2",
+        "armeria-rxjava3",
+        "armeria-zookeeper3").forEach { implementation("com.linecorp.armeria:${it}:1.22.0") }
+
+    implementation("com.google.guava:guava:31.1-jre")
+
+    // Logging
+    runtimeOnly("ch.qos.logback:logback-classic:1.2.11")
+    runtimeOnly("org.slf4j:log4j-over-slf4j:1.7.36")
+    implementation("io.github.oshai:kotlin-logging-jvm:4.0.0-beta-11")
+}
+
+java {
+    toolchain.languageVersion.set(JavaLanguageVersion.of(15))
+}
+
+testing {
+    suites {
+        // Configure the built-in test suite
+        val test by getting(JvmTestSuite::class) {
+            // Use Kotlin Test test framework
+            useKotlinTest("1.7.10")
+
+            dependencies {
+                // Use newer version of JUnit Engine for Kotlin Test
+                implementation("org.junit.jupiter:junit-jupiter-engine:5.9.1")
+            }
+        }
+    }
+}
+
+tasks.withType<JavaCompile> {
+    options.compilerArgs.add("-parameters")
 }
 
 application {
