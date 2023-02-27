@@ -15,17 +15,18 @@ service TodoService {
 }
 
 message Todo {
-  string tod_id = 1;
+  string todo_id = 1;
   string author_id = 2;
   string title = 3;
   string description = 4;
-  string created_at = 5;
+  int64 created_at = 5;
+  int64 updated_at = 6;
   enum TODO_STATUS {
       CREATED = 0;
       IN_PROGRESS = 1;
       COMPLETED = 2;
   }
-  TODO_STATUS status = 6;
+  TODO_STATUS status = 7;
 }
 message ID {
   string todo_id = 1;
@@ -34,4 +35,11 @@ message ID {
 message GetTodosRequest {
   optional int64 page = 1;
   optional int64 limit = 2;
+}
+
+//May need to use for update, delete todo grpc methods
+message TodoResult {
+  bool is_success = 1;
+  optional string todo_id = 2;
+
 }

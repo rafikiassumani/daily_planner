@@ -1,0 +1,38 @@
+
+syntax = "proto3";
+
+package todo.app.grpc;
+
+option java_package = "todo.app.grpc";
+
+service UserService {
+  rpc CreateUser(User) returns (USER_ID);
+  rpc GetUser(USER_ID) returns (User);
+  rpc UpdateUser(User) returns (USER_ID);
+  rpc DeleteUser(USER_ID) returns (USER_ID);
+  //server side streaming method
+  rpc GetAllUsers(GetUsersRequest) returns (stream User);
+}
+
+message User {
+  string user_id = 1;
+  string first_name = 2;
+  string last_name = 3;
+  string email = 4;
+  int64 created_at = 5;
+}
+message USER_ID {
+  string user_id = 1;
+}
+
+message GetUsersRequest {
+  optional int64 page = 1;
+  optional int64 limit = 2;
+}
+
+//May need to use for update, delete todo grpc methods
+message UserResult {
+  bool is_success = 1;
+  optional string todo_id = 2;
+
+}

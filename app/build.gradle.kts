@@ -16,7 +16,7 @@ repositories {
 }
 
 dependencies {
-    implementation(project(":stubs"))
+    //implementation(project(":stubs"))
     // This dependency is used by the application.
     listOf(
         "armeria",
@@ -30,11 +30,17 @@ dependencies {
         "armeria-zookeeper3").forEach { implementation("com.linecorp.armeria:${it}:1.22.0") }
 
     implementation("com.google.guava:guava:31.1-jre")
+    api(project( ":stubs"))
 
     // Logging
     runtimeOnly("ch.qos.logback:logback-classic:1.2.11")
     runtimeOnly("org.slf4j:log4j-over-slf4j:1.7.36")
     implementation("io.github.oshai:kotlin-logging-jvm:4.0.0-beta-11")
+    implementation("io.micrometer:micrometer-registry-prometheus:1.10.4")
+    implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.14.2")
+    implementation("com.linecorp.armeria:armeria-kotlin:1.22.1")
+    implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.4.0")
+    implementation("org.apache.kafka:kafka-clients:3.4.0")
 }
 
 java {
