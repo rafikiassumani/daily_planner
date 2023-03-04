@@ -1,36 +1,46 @@
 package daily_planner.app.grpc
 
+import daily_planner.app.kafka.TodoKafkaProducer
+import daily_planner.stubs.Todo
 import io.micrometer.prometheus.PrometheusMeterRegistry
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.asFlow
 import kotlinx.datetime.Clock
 import todo.app.grpc.TodoOuterClass
-import todo.app.grpc.TodoOuterClass.Todo
 import todo.app.grpc.TodoOuterClass.ID
 import todo.app.grpc.TodoServiceGrpcKt
-import java.util.Date
 import java.util.UUID
 
 class TodoService (private val registry: PrometheusMeterRegistry)
     : TodoServiceGrpcKt.TodoServiceCoroutineImplBase() {
     companion object {
-        val todoList = mutableListOf<Todo>()
+        val todoList = mutableListOf<TodoOuterClass.Todo>()
+        const val brokers = "localhost:9092"
+        const val topic = "todos"
     }
-    override suspend fun createTodo(request: Todo): ID {
+    override suspend fun createTodo(request: TodoOuterClass.Todo): ID {
         registry.counter("grpc.create.todo").increment()
 
-        val todo = Todo.newBuilder()
+        val todo = TodoOuterClass.Todo.newBuilder()
             .setTodoId(UUID.randomUUID().toString())
             .setAuthorId(request.authorId)
             .setTitle(request.title)
             .setDescription(request.description)
             .setCreatedAt(Clock.System.now().toEpochMilliseconds())
-            .setStatus(Todo.TODO_STATUS.CREATED)
+            .setStatus(TodoOuterClass.Todo.TODO_STATUS.CREATED)
             .build()
-
-       //record created todo kafka event
-       //record prometheus todo count
+        // replace with db Save
         todoList.add(todo)
+        //record created todo kafka event
+        TodoKafkaProducer(brokers).produce(topic,
+            Todo(
+                id = todo.todoId,
+                title = todo.title,
+                description = todo.description,
+                createdAt = todo.createdAt,
+                status = todo.status.toString()
+         )
+        )
         return ID
             .newBuilder()
             .setTodoId(todo.todoId)
@@ -38,31 +48,31 @@ class TodoService (private val registry: PrometheusMeterRegistry)
 
     }
 
-    override suspend fun getTodo(request: ID): Todo {
+    override suspend fun getTodo(request: ID): TodoOuterClass.Todo {
         registry.counter("grpc.ger.todo").increment()
         val todo = todoList.firstOrNull { it.todoId == request.todoId }
 
         return if ( todo != null) {
-            Todo.newBuilder()
+            TodoOuterClass.Todo.newBuilder()
                 .setTodoId(UUID.randomUUID().toString())
                 .setAuthorId(todo.authorId)
                 .setTitle(todo.title)
                 .setDescription(todo.description)
                 .setCreatedAt(todo.createdAt)
-                .setStatus(Todo.TODO_STATUS.CREATED)
+                .setStatus(TodoOuterClass.Todo.TODO_STATUS.CREATED)
                 .build()
         } else {
-            Todo.newBuilder()
+            TodoOuterClass.Todo.newBuilder()
                 .build()
         }
     }
 
-    override suspend fun updateTodo(request: Todo): ID {
+    override suspend fun updateTodo(request: TodoOuterClass.Todo): ID {
         registry.counter("grpc.update.todo").increment()
         val todo = todoList.firstOrNull { it.todoId == request.todoId }
 
         return if(todo != null) {
-            val updatedTodo = Todo.newBuilder()
+            val updatedTodo = TodoOuterClass.Todo.newBuilder()
                 .setAuthorId(todo.authorId)
                 .setTitle(todo.title)
                 .setDescription(todo.description)
@@ -74,6 +84,16 @@ class TodoService (private val registry: PrometheusMeterRegistry)
             // send email using workflow to notify owner that to do was updated. Might also need to
             // send email containing stats of all todos created and updated.
             todoList.add(updatedTodo)
+            //send update kafka event
+            TodoKafkaProducer(brokers).produce(
+                topic,
+                Todo(
+                    id = todo.todoId,
+                    title = todo.title,
+                    description = todo.description,
+                    createdAt = todo.createdAt,
+                    status = todo.status.toString()
+                ))
             ID.newBuilder().setTodoId(todo.todoId).build()
         } else {
             ID.newBuilder().setTodoId("-1").build()
@@ -94,7 +114,7 @@ class TodoService (private val registry: PrometheusMeterRegistry)
         }
     }
 
-    override fun getAllTodos(request: TodoOuterClass.GetTodosRequest): Flow<Todo> {
+    override fun getAllTodos(request: TodoOuterClass.GetTodosRequest): Flow<TodoOuterClass.Todo> {
         //async stream. Client needs to use collect method. what about non kotlin clients ?
         registry.counter("grpc.stream.all.todos").increment()
         return todoList.asFlow()

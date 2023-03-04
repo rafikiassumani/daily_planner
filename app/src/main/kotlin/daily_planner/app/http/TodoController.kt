@@ -7,9 +7,13 @@ import com.linecorp.armeria.server.annotation.Param
 import com.linecorp.armeria.server.annotation.Post
 import com.linecorp.armeria.server.annotation.Put
 import com.linecorp.armeria.server.annotation.RequestObject
+import daily_planner.app.kafka.TodoKafkaProducer
+import daily_planner.stubs.Todo
 import io.micrometer.prometheus.PrometheusMeterRegistry
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.withContext
 import java.util.Date
 import java.util.UUID
 
@@ -19,7 +23,7 @@ class TodoController(
     private val todos = mutableListOf<Todo>()
 
     @Post("/todos")
-    fun createTodo(@RequestObject todoRequest: Todo): HttpResponse {
+    suspend fun createTodo(@RequestObject todoRequest: Todo): HttpResponse {
         prometheusRegistry.counter("http.post.todo").increment()
         val todo = Todo(
             id = UUID.randomUUID().toString(),
@@ -27,6 +31,17 @@ class TodoController(
             description = todoRequest.description,
             createdAt = Date().time,
         )
+        //Produce kafka event
+        withContext(Dispatchers.IO) {
+            TodoKafkaProducer("localhost:9092").produce("todos",
+                Todo(
+                    id = todo.id,
+                    title = todo.title,
+                    description = todo.description,
+                    createdAt = todo.createdAt,
+                    status = todo.status
+                ))
+        }
         todos.add(todo);
         return HttpResponse.ofJson(todo)
     }
@@ -45,7 +60,7 @@ class TodoController(
     }
 
     @Put("/todo/{todoId}")
-    fun updateTodo(@Param("todoId") todoId: String, @RequestObject todoRequest: Todo): HttpResponse {
+    suspend fun updateTodo(@Param("todoId") todoId: String, @RequestObject todoRequest: Todo): HttpResponse {
         prometheusRegistry.counter("http.update.todo").increment()
         val todo = todos.firstOrNull { it.id == todoId} ?: return HttpResponse.ofJson(HttpStatus.NOT_FOUND, NotFoundResult("todo not found"))
 
@@ -55,6 +70,18 @@ class TodoController(
              modifiedAt = Date().time
              status = todoRequest.status
          }
+        //Produce kafka event
+        //Do we need armeria coroutine context ????
+        withContext(Dispatchers.IO) {
+            TodoKafkaProducer("localhost:9092").produce("todos",
+                Todo(
+                    id = todo.id,
+                    title = todo.title,
+                    description = todo.description,
+                    createdAt = todo.createdAt,
+                    status = todo.status
+                ))
+        }
         return HttpResponse.ofJson(todo)
     }
 
@@ -80,21 +107,8 @@ class TodoController(
             }
         }
         return HttpResponse.ofJson(getAllTodosJob.await())
-
         //return HttpResponse.ofJson(todos)
     }
 }
 
-data class Todo(
-    var id: String?,
-    var title: String,
-    var description: String,
-    var createdAt: Long? = null,
-    var modifiedAt: Long? = null,
-    var status: TodoStatus = TodoStatus.CREATED
-)
-
 data class NotFoundResult(val message: String)
-enum class TodoStatus {
-    CREATED, IN_PROGRESS, COMPLETED
-}
