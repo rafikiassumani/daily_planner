@@ -4,8 +4,11 @@ import io.micrometer.prometheus.PrometheusMeterRegistry
 import kotlinx.coroutines.flow.Flow
 import todo.app.grpc.UserOuterClass
 import todo.app.grpc.UserServiceGrpcKt.UserServiceCoroutineImplBase
+import javax.inject.Inject
 
-class UserService(private val registry: PrometheusMeterRegistry) :
+class UserService @Inject constructor(
+    private val registry: PrometheusMeterRegistry
+ ) :
     UserServiceCoroutineImplBase() {
     override suspend fun createUser(request: UserOuterClass.User): UserOuterClass.USER_ID {
         registry.counter("grpc.create.user").increment()

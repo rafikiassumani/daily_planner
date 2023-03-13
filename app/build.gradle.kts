@@ -30,6 +30,7 @@ dependencies {
         "armeria-zookeeper3").forEach { implementation("com.linecorp.armeria:${it}:1.22.0") }
 
     implementation("com.google.guava:guava:31.1-jre")
+    implementation("com.google.inject:guice:5.1.0")
     api(project( ":stubs"))
 
     // Logging

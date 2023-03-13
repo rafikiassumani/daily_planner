@@ -20,6 +20,7 @@ dependencies {
     implementation("io.github.oshai:kotlin-logging-jvm:4.0.0-beta-11")
     runtimeOnly("ch.qos.logback:logback-classic:1.2.11")
     runtimeOnly("org.slf4j:log4j-over-slf4j:1.7.36")
+    implementation("com.google.inject:guice:5.1.0")
 }
 
 java {

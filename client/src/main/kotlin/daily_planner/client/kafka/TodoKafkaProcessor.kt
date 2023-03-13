@@ -1,24 +1,19 @@
 package daily_planner.client.kafka
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.databind.SerializationFeature
-import com.fasterxml.jackson.databind.util.StdDateFormat
-import com.fasterxml.jackson.module.kotlin.registerKotlinModule
-import daily_planner.stubs.Todo
+import daily_planner.client.ClientAppGuiceModule.KafkaBrokers
+import daily_planner.stubs.TodoEvent
 import io.github.oshai.KotlinLogging
 import org.apache.kafka.clients.consumer.KafkaConsumer
 import org.apache.kafka.common.serialization.StringDeserializer
 import java.time.Duration
 import java.util.*
+import javax.inject.Inject
 
-class TodoKafkaProcessor(private val brokers: String){
-
-    //Need single jsonMapper
-    private val jsonMapper = ObjectMapper().apply {
-        registerKotlinModule()
-        disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
-        dateFormat = StdDateFormat()
-    }
+class TodoKafkaProcessor @Inject constructor(
+    @KafkaBrokers private val brokers: String,
+    private val jsonMapper: ObjectMapper
+){
 
     private val logger = KotlinLogging.logger {}
     private fun crateConsumer() : KafkaConsumer<String, String> {
@@ -42,13 +37,14 @@ class TodoKafkaProcessor(private val brokers: String){
             // Create report for todos that are in-progress, completed
             println(records)
             records.forEach {
-                val todoObject = jsonMapper.readValue(it.value(), Todo::class.java)
+                val todoObject = jsonMapper.readValue(it.value(), TodoEvent::class.java)
                 logger.info("======= Start logging todo from kafka consumer ======")
-                logger.info(todoObject.id)
-                logger.info(todoObject.title)
-                logger.info(todoObject.description)
-                logger.info(todoObject.createdAt.toString())
-                logger.info(todoObject.status.toString())
+                logger.info(todoObject.eventType)
+                logger.info(todoObject.todoData.id)
+                logger.info(todoObject.todoData.title)
+                logger.info(todoObject.todoData.description)
+                logger.info(todoObject.todoData.createdAt.toString())
+                logger.info(todoObject.todoData.status)
                 logger.info("======= End logging todo from kafka consumer ======")
             }
         }

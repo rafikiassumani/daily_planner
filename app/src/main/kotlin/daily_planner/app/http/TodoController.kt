@@ -9,16 +9,20 @@ import com.linecorp.armeria.server.annotation.Put
 import com.linecorp.armeria.server.annotation.RequestObject
 import daily_planner.app.kafka.TodoKafkaProducer
 import daily_planner.stubs.Todo
+import daily_planner.stubs.TodoEvent
 import io.micrometer.prometheus.PrometheusMeterRegistry
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
+import kotlinx.datetime.Clock
 import java.util.Date
 import java.util.UUID
+import javax.inject.Inject
 
-class TodoController(
-    private val prometheusRegistry : PrometheusMeterRegistry
+class TodoController @Inject constructor(
+    private val prometheusRegistry : PrometheusMeterRegistry,
+   private val kafkaProducer: TodoKafkaProducer
 ) {
     private val todos = mutableListOf<Todo>()
 
@@ -33,14 +37,18 @@ class TodoController(
         )
         //Produce kafka event
         withContext(Dispatchers.IO) {
-            TodoKafkaProducer("localhost:9092").produce("todos",
-                Todo(
+            kafkaProducer.produce("todos",
+                TodoEvent(
+                    eventType = "CREATE_TODO",
+                    todoData = Todo(
                     id = todo.id,
                     title = todo.title,
                     description = todo.description,
                     createdAt = todo.createdAt,
                     status = todo.status
-                ))
+                    )
+                )
+            )
         }
         todos.add(todo);
         return HttpResponse.ofJson(todo)
@@ -67,20 +75,24 @@ class TodoController(
         todo.apply {
              title = todoRequest.title
              description = todoRequest.description
-             modifiedAt = Date().time
+             updatedAt = Clock.System.now().toEpochMilliseconds()
              status = todoRequest.status
          }
         //Produce kafka event
         //Do we need armeria coroutine context ????
         withContext(Dispatchers.IO) {
-            TodoKafkaProducer("localhost:9092").produce("todos",
-                Todo(
-                    id = todo.id,
-                    title = todo.title,
-                    description = todo.description,
-                    createdAt = todo.createdAt,
-                    status = todo.status
-                ))
+            kafkaProducer.produce("todos",
+                TodoEvent(
+                    eventType = "UPDATE_TODO",
+                    todoData = Todo(
+                        id = todo.id,
+                        title = todo.title,
+                        description = todo.description,
+                        createdAt = todo.createdAt,
+                        status = todo.status
+                    )
+                )
+            )
         }
         return HttpResponse.ofJson(todo)
     }
@@ -107,7 +119,6 @@ class TodoController(
             }
         }
         return HttpResponse.ofJson(getAllTodosJob.await())
-        //return HttpResponse.ofJson(todos)
     }
 }
 

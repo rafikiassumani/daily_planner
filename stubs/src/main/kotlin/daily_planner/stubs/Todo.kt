@@ -5,7 +5,7 @@ data class Todo(
     var title: String,
     var description: String,
     var createdAt: Long? = null,
-    var modifiedAt: Long? = null,
+    var updatedAt: Long? = null,
     //need to fix this
     var status: String = TodoStatus.CREATED.toString()
 )

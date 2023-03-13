@@ -1,16 +1,26 @@
 package daily_planner.client
 
+import com.google.inject.Guice
 import daily_planner.client.kafka.TodoKafkaProcessor
-import org.apache.kafka.clients.consumer.KafkaConsumer
+import javax.inject.Inject
 
-class Client {
-    companion object {
-        val kafkaProcessor = TodoKafkaProcessor("localhost:9092")
+class Client @Inject constructor(
+    private val kafkaProcessor: TodoKafkaProcessor
+){
+
+    fun processTodos() {
+        kafkaProcessor.consume("todos")
     }
 
 }
 
 fun main() {
-    println("client class started $Client.brokers")
-    Client.kafkaProcessor.consume("todos")
+
+    println("client class starting for processing messages")
+    val injector = Guice.createInjector(
+        ClientAppGuiceModule()
+    )
+
+    val client = injector.getInstance(Client::class.java)
+    client.processTodos()
 }
