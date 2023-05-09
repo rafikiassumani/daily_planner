@@ -34,14 +34,27 @@ dependencies {
     api(project( ":stubs"))
 
     // Logging
-    runtimeOnly("ch.qos.logback:logback-classic:1.2.11")
-    runtimeOnly("org.slf4j:log4j-over-slf4j:1.7.36")
+    runtimeOnly("ch.qos.logback:logback-classic:1.4.6")
+    runtimeOnly("org.slf4j:log4j-over-slf4j:2.0.5")
     implementation("io.github.oshai:kotlin-logging-jvm:4.0.0-beta-11")
-    implementation("io.micrometer:micrometer-registry-prometheus:1.10.4")
+    implementation("io.micrometer:micrometer-registry-prometheus:1.10.5")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.14.2")
     implementation("com.linecorp.armeria:armeria-kotlin:1.22.1")
     implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.4.0")
     implementation("org.apache.kafka:kafka-clients:3.4.0")
+
+    //DB dependencies
+    //pg
+    implementation("org.postgresql:postgresql:42.6.0")
+    //hikaricp
+    implementation("com.zaxxer:HikariCP:5.0.1")
+    //jdbi
+    implementation("org.jdbi:jdbi3-kotlin:3.38.0-rc2")
+    implementation("org.jdbi:jdbi3-kotlin-sqlobject:3.38.0-rc2")
+    implementation("org.jdbi:jdbi3-postgres:3.38.0-rc2")
+    implementation("org.jdbi:jdbi3-guice:3.37.1")
+    implementation("org.jdbi:jdbi3-jackson2:3.38.0-rc2")
+
 }
 
 java {

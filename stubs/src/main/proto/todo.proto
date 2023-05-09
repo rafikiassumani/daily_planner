@@ -3,6 +3,8 @@ syntax = "proto3";
 
 package todo.app.grpc;
 
+import "google/protobuf/timestamp.proto";
+
 option java_package = "todo.app.grpc";
 
 service TodoService {
@@ -11,7 +13,7 @@ service TodoService {
   rpc UpdateTodo(Todo) returns (ID);
   rpc DeleteTodo(ID) returns (ID);
   //server side streaming method
-  rpc GetAllTodos(GetTodosRequest) returns (stream Todo);
+  rpc GetAllTodosByAuthor(AuthorIdRequest) returns (stream Todo);
 }
 
 message Todo {
@@ -19,27 +21,27 @@ message Todo {
   string author_id = 2;
   string title = 3;
   string description = 4;
-  int64 created_at = 5;
-  int64 updated_at = 6;
+  google.protobuf.Timestamp created_at = 5;
+  google.protobuf.Timestamp updated_at = 6;
+  google.protobuf.Timestamp completed_at = 7;
+  google.protobuf.Timestamp planned_at = 8;
   enum TODO_STATUS {
       CREATED = 0;
       IN_PROGRESS = 1;
       COMPLETED = 2;
   }
-  TODO_STATUS status = 7;
+  TODO_STATUS status = 9;
 }
 message ID {
   string todo_id = 1;
 }
 
-message GetTodosRequest {
-  optional int64 page = 1;
-  optional int64 limit = 2;
+message AuthorIdRequest {
+  string author_id = 1;
 }
 
 //May need to use for update, delete todo grpc methods
 message TodoResult {
   bool is_success = 1;
   optional string todo_id = 2;
-
 }

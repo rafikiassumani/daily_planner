@@ -1,53 +1,50 @@
 package daily_planner.app.grpc
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.google.protobuf.Timestamp
+import daily_planner.app.dao.TodoRepository
 import daily_planner.app.kafka.TodoKafkaProducer
-import daily_planner.stubs.Todo
 import daily_planner.stubs.TodoEvent
+import io.grpc.Status
+import io.grpc.StatusException
 import io.micrometer.prometheus.PrometheusMeterRegistry
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.asFlow
-import kotlinx.datetime.Clock
 import todo.app.grpc.TodoOuterClass
 import todo.app.grpc.TodoOuterClass.ID
 import todo.app.grpc.TodoServiceGrpcKt
-import java.util.UUID
+import java.time.Instant
+import java.util.*
 import javax.inject.Inject
 
 class TodoService @Inject constructor (
     private val registry: PrometheusMeterRegistry,
-    private val jsonMapper: ObjectMapper
-)
-    : TodoServiceGrpcKt.TodoServiceCoroutineImplBase() {
+    private val jsonMapper: ObjectMapper,
+    private val repository: TodoRepository
+) : TodoServiceGrpcKt.TodoServiceCoroutineImplBase() {
     companion object {
-        val todoList = mutableMapOf<String, TodoOuterClass.Todo>()
         const val brokers = "localhost:9092"
         const val topic = "todos"
     }
     override suspend fun createTodo(request: TodoOuterClass.Todo): ID {
         registry.counter("grpc.create.todo").increment()
 
-        val todo = TodoOuterClass.Todo.newBuilder()
-            .setTodoId(UUID.randomUUID().toString())
-            .setAuthorId(request.authorId)
-            .setTitle(request.title)
-            .setDescription(request.description)
-            .setCreatedAt(Clock.System.now().toEpochMilliseconds())
-            .setStatus(TodoOuterClass.Todo.TODO_STATUS.CREATED)
-            .build()
         // replace with db Save
-        todoList[todo.todoId] = todo
+         val todo = repository.createTodo(
+             title = request.title,
+             description = request.description,
+             authorId = request.authorId,
+             plannedAt = request.plannedAt?.let { Date.from(
+                 Instant.ofEpochSecond(request.plannedAt.seconds,
+                     request.plannedAt.nanos.toLong())
+             ) },
+             status = request.status.ordinal
+         )
         //record created todo kafka event
         TodoKafkaProducer(brokers, jsonMapper).produce(topic,
             TodoEvent(
                 eventType = "CREATE_TODO",
-                todoData = Todo(
-                    id = todo.todoId,
-                    title = todo.title,
-                    description = todo.description,
-                    createdAt = todo.createdAt,
-                    status = todo.status.toString()
-                )
+                todoData = todo
             )
         )
         return ID
@@ -59,93 +56,90 @@ class TodoService @Inject constructor (
 
     override suspend fun getTodo(request: ID): TodoOuterClass.Todo {
         registry.counter("grpc.ger.todo").increment()
-        val todo = todoList[request.todoId]
+        val todo = repository.findTodoById(UUID.fromString(request.todoId))
+            ?: throw StatusException(Status.NOT_FOUND.withDescription("todo with ${request.todoId} id not found"))
 
-        return if ( todo != null) {
-            TodoOuterClass.Todo.newBuilder()
-                .setTodoId(UUID.randomUUID().toString())
-                .setAuthorId(todo.authorId)
-                .setTitle(todo.title)
-                .setDescription(todo.description)
-                .setCreatedAt(todo.createdAt)
-                .setStatus(TodoOuterClass.Todo.TODO_STATUS.CREATED)
-                .build()
-        } else {
-            TodoOuterClass.Todo.newBuilder()
-                .build()
-        }
+
+        return TodoOuterClass.Todo.newBuilder()
+            .setTodoId(todo.todoId)
+            .setAuthorId(todo.authorId)
+            .setTitle(todo.title)
+            .setDescription(todo.description)
+            .setCreatedAt(Timestamp.newBuilder()
+                .setSeconds(todo.createdAt?.toInstant()?.epochSecond!!)
+                .setNanos(todo.createdAt?.toInstant()?.nano!!).build())
+            .setStatus(TodoOuterClass.Todo.TODO_STATUS.forNumber(todo.status))
+            .build()
     }
 
     override suspend fun updateTodo(request: TodoOuterClass.Todo): ID {
         registry.counter("grpc.update.todo").increment()
-        val todo = todoList[request.todoId]
+        val todo = repository.findTodoById(UUID.fromString(request.todoId))
+            ?: throw StatusException(Status.NOT_FOUND.withDescription("todo with ${request.todoId} id not found"))
 
-        return if(todo != null) {
-            val updatedTodo = TodoOuterClass.Todo.newBuilder().apply {
-                todoId = todo.todoId
-                authorId = todo.authorId
-                title = request.title
-                description = request.description
-                status = request.status
-                createdAt = todo.createdAt
-                updatedAt = Clock.System.now().toEpochMilliseconds()
-            }.build()
-
-            // record updated todo kafka event  {tod_id, action}
-            // send email using workflow to notify owner that to do was updated. Might also need to
-            // send email containing stats of all todos created and updated.
-            todoList[todo.todoId] = updatedTodo
-            //send update kafka event
-            TodoKafkaProducer(brokers, jsonMapper).produce(
-                topic,
-                TodoEvent(
-                    eventType = "UPDATE_TODO",
-                    todoData = Todo(
-                        id = updatedTodo.todoId,
-                        title = updatedTodo.title,
-                        description = updatedTodo.description,
-                        createdAt = updatedTodo.createdAt,
-                        updatedAt = updatedTodo.updatedAt,
-                        status = todo.status.toString()
-                    )
-                )
+        // record updated todo kafka event  {tod_id, action}
+        // send email using workflow to notify owner that to do was updated. Might also need to
+        // send email containing stats of all todos created and updated.
+        val updatedTodo = repository.updateTodo(
+            todoId = UUID.fromString(todo.todoId),
+            title = request.title,
+            description = request.description,
+            authorId = request.authorId,
+            plannedAt = request.plannedAt?.let {Date.from(
+                Instant.ofEpochSecond(request.plannedAt.seconds,
+                    request.plannedAt.nanos.toLong())
+            ) },
+            completedAt = request.completedAt?.let {Date.from(
+                Instant.ofEpochSecond(request.completedAt.seconds,
+                    request.completedAt.nanos.toLong())
+            ) },
+            status = request.status.ordinal
+        )
+        //send update kafka event
+        TodoKafkaProducer(brokers, jsonMapper).produce(
+            topic,
+            TodoEvent(
+                eventType = "UPDATE_TODO",
+                todoData = updatedTodo
             )
-            ID.newBuilder().setTodoId(todo.todoId).build()
-        } else {
-            ID.newBuilder().setTodoId("-1").build()
-        }
+        )
+
+        return ID.newBuilder().setTodoId(todo.todoId).build()
     }
 
     override suspend fun deleteTodo(request: ID): ID {
         registry.counter("grpc.delete.todo").increment()
-        val todo = todoList[request.todoId]
+        val todo = repository.findTodoById(UUID.fromString(request.todoId))
+            ?: throw StatusException(Status.NOT_FOUND.withDescription("todo with ${request.todoId} id not found"))
 
-        return if(todo != null) {
-
-            //record deleted todo kafka event {tod_id, action}
-            todoList.remove(todo.todoId)
-            TodoKafkaProducer(brokers, jsonMapper).produce(
-                topic,
-                TodoEvent(
-                    eventType = "DELETE_TODO",
-                    todoData = Todo(
-                        id = todo.todoId,
-                        title = todo.title,
-                        description = todo.description,
-                        createdAt = todo.createdAt,
-                        status = todo.status.toString()
-                    )
-                )
+        //record deleted todo kafka event {tod_id, action}
+        repository.deleteById(UUID.fromString(todo.todoId))
+        TodoKafkaProducer(brokers, jsonMapper).produce(
+            topic,
+            TodoEvent(
+                eventType = "DELETE_TODO",
+                todoData = todo
             )
-            ID.newBuilder().setTodoId(todo.todoId).build()
-        } else {
-            ID.newBuilder().setTodoId("-1").build()
-        }
+        )
+
+        return ID.newBuilder().setTodoId(todo.todoId).build()
+
     }
 
-    override fun getAllTodos(request: TodoOuterClass.GetTodosRequest): Flow<TodoOuterClass.Todo> {
-        //async stream. Client needs to use collect method. what about non kotlin clients ?
+    override fun getAllTodosByAuthor(request: TodoOuterClass.AuthorIdRequest): Flow<TodoOuterClass.Todo> {
         registry.counter("grpc.stream.all.todos").increment()
-        return todoList.values.asFlow()
+
+        val todos = repository.listTodosByAuthor(request.authorId)
+
+         return todos.map {
+            TodoOuterClass.Todo.newBuilder()
+            .setTodoId(UUID.randomUUID().toString())
+            .setAuthorId(it.authorId)
+            .setTitle(it.title)
+            .setDescription(it.description)
+            .setStatus(TodoOuterClass.Todo.TODO_STATUS.forNumber(it.status))
+            .build()
+        }.asFlow()
+
     }
 }

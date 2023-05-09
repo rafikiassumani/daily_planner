@@ -24,10 +24,11 @@ dependencies {
 
     compileOnly("io.grpc:grpc-stub:1.53.0")
     implementation("io.grpc:grpc-protobuf:1.53.0")
-    implementation("com.google.protobuf:protobuf-java-util:3.21.12")
+    implementation("com.google.protobuf:protobuf-java-util:3.22.2")
     api("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4")
-    api("com.google.protobuf:protobuf-kotlin:3.21.12")
+    api("com.google.protobuf:protobuf-kotlin:3.22.2")
     api("io.grpc:grpc-kotlin-stub:1.3.0")
+    implementation("org.jdbi:jdbi3-kotlin:3.38.0-rc2")
 }
 
 sourceSets {

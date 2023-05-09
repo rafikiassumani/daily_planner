@@ -1,56 +1,46 @@
 package daily_planner.app.http
 
 import com.linecorp.armeria.common.*
-import com.linecorp.armeria.server.annotation.Delete
-import com.linecorp.armeria.server.annotation.Get
-import com.linecorp.armeria.server.annotation.Param
-import com.linecorp.armeria.server.annotation.Post
-import com.linecorp.armeria.server.annotation.Put
-import com.linecorp.armeria.server.annotation.RequestObject
+import com.linecorp.armeria.server.annotation.*
+import daily_planner.app.dao.TodoRepository
 import daily_planner.app.kafka.TodoKafkaProducer
 import daily_planner.stubs.Todo
 import daily_planner.stubs.TodoEvent
 import io.micrometer.prometheus.PrometheusMeterRegistry
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.withContext
-import kotlinx.datetime.Clock
-import java.util.Date
-import java.util.UUID
+import java.time.Instant
+import java.util.*
 import javax.inject.Inject
 
 class TodoController @Inject constructor(
     private val prometheusRegistry : PrometheusMeterRegistry,
-   private val kafkaProducer: TodoKafkaProducer
+    private val kafkaProducer: TodoKafkaProducer,
+    private val todoRepository: TodoRepository
 ) {
     private val todos = mutableListOf<Todo>()
 
     @Post("/todos")
     suspend fun createTodo(@RequestObject todoRequest: Todo): HttpResponse {
         prometheusRegistry.counter("http.post.todo").increment()
-        val todo = Todo(
-            id = UUID.randomUUID().toString(),
-            title = todoRequest.title,
-            description = todoRequest.description,
-            createdAt = Date().time,
-        )
+
+        val todo  = todoRepository.createTodo(
+                title = todoRequest.title,
+                description = todoRequest.description,
+                authorId = todoRequest.authorId,
+                plannedAt = todoRequest.plannedAt?.let {Date.from(Instant.ofEpochSecond(it.time))},
+                completedAt = todoRequest.completedAt?.let {Date.from(Instant.ofEpochSecond(it.time))},
+                updatedAt = todoRequest.updatedAt?.let {Date.from(Instant.ofEpochSecond(it.time))},
+                status = todoRequest.status
+            )
         //Produce kafka event
-        withContext(Dispatchers.IO) {
-            kafkaProducer.produce("todos",
+        kafkaProducer.produce("todos",
                 TodoEvent(
                     eventType = "CREATE_TODO",
-                    todoData = Todo(
-                    id = todo.id,
-                    title = todo.title,
-                    description = todo.description,
-                    createdAt = todo.createdAt,
-                    status = todo.status
-                    )
+                    todoData = todo
                 )
-            )
-        }
-        todos.add(todo);
+          )
+
         return HttpResponse.ofJson(todo)
     }
 
@@ -58,67 +48,76 @@ class TodoController @Inject constructor(
     fun getTodo(@Param("todoId") todoId: String): HttpResponse {
         prometheusRegistry.counter("http.get.todo").increment()
 
-        val todo = todos.firstOrNull { it.id == todoId}
+        val todo = todoRepository.findTodoById(UUID.fromString(todoId))
 
-        return if(todo == null) {
-            HttpResponse.ofJson(HttpStatus.NOT_FOUND, NotFoundResult("todo not found"))
-        } else {
-            HttpResponse.ofJson(todo)
+        todo?.let {
+            return HttpResponse.ofJson(it)
         }
+
+        return HttpResponse.ofJson( object {
+            val message = "Not found"
+        })
     }
 
     @Put("/todo/{todoId}")
     suspend fun updateTodo(@Param("todoId") todoId: String, @RequestObject todoRequest: Todo): HttpResponse {
         prometheusRegistry.counter("http.update.todo").increment()
-        val todo = todos.firstOrNull { it.id == todoId} ?: return HttpResponse.ofJson(HttpStatus.NOT_FOUND, NotFoundResult("todo not found"))
+        val todo = todoRepository.findTodoById(UUID.fromString(todoId))
 
-        todo.apply {
-             title = todoRequest.title
-             description = todoRequest.description
-             updatedAt = Clock.System.now().toEpochMilliseconds()
-             status = todoRequest.status
-         }
-        //Produce kafka event
-        //Do we need armeria coroutine context ????
-        withContext(Dispatchers.IO) {
+        if (todo != null) {
+            val updatedTodo = todoRepository.updateTodo(
+                todoId = UUID.fromString(todoId),
+                title = todoRequest.title,
+                description = todoRequest.description,
+                authorId = todoRequest.authorId,
+                plannedAt = todoRequest.plannedAt?.let {Date.from(Instant.ofEpochSecond(it.time))},
+                completedAt = todoRequest.completedAt?.let {Date.from(Instant.ofEpochSecond(it.time))},
+                status = todoRequest.status
+            )
+            //Produce kafka event
             kafkaProducer.produce("todos",
                 TodoEvent(
                     eventType = "UPDATE_TODO",
-                    todoData = Todo(
-                        id = todo.id,
-                        title = todo.title,
-                        description = todo.description,
-                        createdAt = todo.createdAt,
-                        status = todo.status
-                    )
+                    todoData = todo
                 )
             )
+            return HttpResponse.ofJson(updatedTodo)
         }
-        return HttpResponse.ofJson(todo)
+
+        return HttpResponse.ofJson( object {
+            val success = false
+            val message = "Unable to update todo with the following id $todoId"
+        })
+
     }
 
     @Delete("/todo/{todoId}")
     fun deleteTodo(@Param("todoId") todoId: String ): HttpResponse {
         prometheusRegistry.counter("http.delete.todo").increment()
-        val todo = todos.firstOrNull { it.id == todoId} ?: return HttpResponse.ofJson(HttpStatus.NOT_FOUND, NotFoundResult("todo not found"))
+        val todo = todoRepository.findTodoById(UUID.fromString(todoId))
 
-        todos.remove(todo)
-
+        if (todo != null) {
+            todoRepository.deleteById(UUID.fromString(todo.todoId))
+            return HttpResponse.ofJson( object {
+                val success = true
+                val message = "successfully deleted ${todo.todoId}"
+            })
+        }
         return HttpResponse.ofJson( object {
-            val success = true
-            val message = "successfully deleted ${todo.id}"
+            val success = false
+            val message = "Unable to delete the todo with the following $todoId"
         })
     }
 
-    @Get("/todos")
-    suspend fun getTodos(): HttpResponse {
-        prometheusRegistry.counter("http.get.all.todos").increment()
-        val getAllTodosJob = coroutineScope {
+    @Get("/todos/{authorId}")
+    suspend fun getTodos(@Param("authorId") authorId: String): HttpResponse {
+        prometheusRegistry.counter("http.get.all.todos.by.authorId").increment()
+        val getAllTodosByAuthor = coroutineScope {
            async {
-              todos
+               todoRepository.listTodosByAuthor(authorId)
             }
         }
-        return HttpResponse.ofJson(getAllTodosJob.await())
+        return HttpResponse.ofJson(getAllTodosByAuthor.await())
     }
 }
 

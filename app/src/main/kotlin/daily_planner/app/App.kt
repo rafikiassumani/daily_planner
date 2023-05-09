@@ -10,6 +10,7 @@ import com.linecorp.armeria.common.Request
 import com.linecorp.armeria.common.grpc.GrpcMeterIdPrefixFunction
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction
 import com.linecorp.armeria.server.Server
+import com.linecorp.armeria.server.ServerBuilder
 import com.linecorp.armeria.server.ServiceRequestContext
 import com.linecorp.armeria.server.grpc.GrpcService
 import com.linecorp.armeria.server.metric.MetricCollectingService
@@ -39,7 +40,9 @@ class App @Inject constructor(
             .meterRegistry(registry)
             .http(port)
             .service("/", healthEndpoint)
+
             .service("/metrics", PrometheusExpositionService.of(registry.prometheusRegistry))
+            //.annotatedService(HttpGuiceModule())
             .annotatedService(todoController)
             .decorator(MetricCollectingService.newDecorator(MeterIdPrefixFunction.ofDefault("daily_planner.http.service")))
             .service(
@@ -54,16 +57,16 @@ class App @Inject constructor(
 
 }
 
-
 fun main() {
     val logger = KotlinLogging.logger {}
 
     val injector: Injector = Guice.createInjector(
-        AppGuiceModule()
+        AppGuiceModule(),
+        HttpGuiceModule(),
+        DatabaseGuiceModule()
     )
     val app = injector.getInstance(App::class.java)
 
-    //val app = App()
     val server = app.buildServer(8080)
     server.closeOnJvmShutdown()
     server.start().join()

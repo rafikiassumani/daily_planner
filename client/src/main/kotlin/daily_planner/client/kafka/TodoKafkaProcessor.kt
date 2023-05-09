@@ -3,7 +3,7 @@ package daily_planner.client.kafka
 import com.fasterxml.jackson.databind.ObjectMapper
 import daily_planner.client.ClientAppGuiceModule.KafkaBrokers
 import daily_planner.stubs.TodoEvent
-import io.github.oshai.KotlinLogging
+import io.github.oshai.KLogger
 import org.apache.kafka.clients.consumer.KafkaConsumer
 import org.apache.kafka.common.serialization.StringDeserializer
 import java.time.Duration
@@ -12,10 +12,10 @@ import javax.inject.Inject
 
 class TodoKafkaProcessor @Inject constructor(
     @KafkaBrokers private val brokers: String,
-    private val jsonMapper: ObjectMapper
+    private val jsonMapper: ObjectMapper,
+    private val logger: KLogger
 ){
 
-    private val logger = KotlinLogging.logger {}
     private fun crateConsumer() : KafkaConsumer<String, String> {
         val props = Properties()
         props["bootstrap.servers"] = brokers
