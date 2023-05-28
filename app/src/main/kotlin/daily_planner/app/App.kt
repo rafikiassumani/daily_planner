@@ -10,14 +10,12 @@ import com.linecorp.armeria.common.Request
 import com.linecorp.armeria.common.grpc.GrpcMeterIdPrefixFunction
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction
 import com.linecorp.armeria.server.Server
-import com.linecorp.armeria.server.ServerBuilder
 import com.linecorp.armeria.server.ServiceRequestContext
 import com.linecorp.armeria.server.grpc.GrpcService
 import com.linecorp.armeria.server.metric.MetricCollectingService
 import com.linecorp.armeria.server.metric.PrometheusExpositionService
 import daily_planner.app.grpc.TodoService
 import daily_planner.app.grpc.UserService
-import daily_planner.app.http.TodoController
 import io.github.oshai.KotlinLogging
 import io.micrometer.prometheus.PrometheusMeterRegistry
 import java.sql.Timestamp
@@ -27,7 +25,6 @@ import javax.inject.Inject
 
 class App @Inject constructor(
     private val registry: PrometheusMeterRegistry,
-    private val todoController: TodoController,
     private val todoGrpcService: TodoService,
     private val userGrpcService: UserService
 ) {
@@ -42,8 +39,6 @@ class App @Inject constructor(
             .service("/", healthEndpoint)
 
             .service("/metrics", PrometheusExpositionService.of(registry.prometheusRegistry))
-            //.annotatedService(HttpGuiceModule())
-            .annotatedService(todoController)
             .decorator(MetricCollectingService.newDecorator(MeterIdPrefixFunction.ofDefault("daily_planner.http.service")))
             .service(
                 GrpcService.builder()

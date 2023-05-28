@@ -5,6 +5,7 @@ import com.google.protobuf.Timestamp
 import daily_planner.app.dao.TodoRepository
 import daily_planner.app.kafka.TodoKafkaProducer
 import daily_planner.stubs.TodoEvent
+import daily_planner.stubs.TodoStatus
 import io.grpc.Status
 import io.grpc.StatusException
 import io.micrometer.prometheus.PrometheusMeterRegistry
@@ -25,6 +26,13 @@ class TodoService @Inject constructor (
     companion object {
         const val brokers = "localhost:9092"
         const val topic = "todos"
+
+        fun convertProtoToInstance(timestamp: Timestamp) : Instant? {
+            if ( timestamp.seconds == 0L) {
+                return null
+            }
+            return Instant.ofEpochSecond(timestamp.seconds, timestamp.nanos.toLong())
+        }
     }
     override suspend fun createTodo(request: TodoOuterClass.Todo): ID {
         registry.counter("grpc.create.todo").increment()
@@ -34,11 +42,8 @@ class TodoService @Inject constructor (
              title = request.title,
              description = request.description,
              authorId = request.authorId,
-             plannedAt = request.plannedAt?.let { Date.from(
-                 Instant.ofEpochSecond(request.plannedAt.seconds,
-                     request.plannedAt.nanos.toLong())
-             ) },
-             status = request.status.ordinal
+             plannedAt = convertProtoToInstance(request.plannedAt),
+             status = TodoStatus.valueOf(request.status.name)
          )
         //record created todo kafka event
         TodoKafkaProducer(brokers, jsonMapper).produce(topic,
@@ -60,16 +65,39 @@ class TodoService @Inject constructor (
             ?: throw StatusException(Status.NOT_FOUND.withDescription("todo with ${request.todoId} id not found"))
 
 
-        return TodoOuterClass.Todo.newBuilder()
+        val response =  TodoOuterClass.Todo.newBuilder()
             .setTodoId(todo.todoId)
             .setAuthorId(todo.authorId)
             .setTitle(todo.title)
             .setDescription(todo.description)
             .setCreatedAt(Timestamp.newBuilder()
-                .setSeconds(todo.createdAt?.toInstant()?.epochSecond!!)
-                .setNanos(todo.createdAt?.toInstant()?.nano!!).build())
-            .setStatus(TodoOuterClass.Todo.TODO_STATUS.forNumber(todo.status))
-            .build()
+                .setSeconds(todo.createdAt?.epochSecond!!)
+                .setNanos(todo.createdAt?.nano!!)
+                .build())
+            .setStatus(TodoOuterClass.Todo.TODO_STATUS.forNumber(todo.status.ordinal))
+
+         if (todo.updatedAt != null) {
+             response.updatedAt = Timestamp.newBuilder()
+                 .setSeconds(todo.updatedAt?.epochSecond!!)
+                 .setNanos(todo.updatedAt?.nano!!)
+                 .build()
+         }
+
+        if (todo.plannedAt != null) {
+            response.plannedAt = Timestamp.newBuilder()
+                .setSeconds(todo.plannedAt?.epochSecond!!)
+                .setNanos(todo.plannedAt?.nano!!)
+                .build()
+        }
+
+        if (todo.completedAt != null) {
+            response.completedAt = Timestamp.newBuilder()
+                .setSeconds(todo.completedAt?.epochSecond!!)
+                .setNanos(todo.completedAt?.nano!!)
+                .build()
+        }
+
+        return response.build()
     }
 
     override suspend fun updateTodo(request: TodoOuterClass.Todo): ID {
@@ -85,17 +113,15 @@ class TodoService @Inject constructor (
             title = request.title,
             description = request.description,
             authorId = request.authorId,
-            plannedAt = request.plannedAt?.let {Date.from(
-                Instant.ofEpochSecond(request.plannedAt.seconds,
-                    request.plannedAt.nanos.toLong())
-            ) },
-            completedAt = request.completedAt?.let {Date.from(
-                Instant.ofEpochSecond(request.completedAt.seconds,
-                    request.completedAt.nanos.toLong())
-            ) },
-            status = request.status.ordinal
+            plannedAt = request.plannedAt?.let {
+                Instant.ofEpochSecond(request.plannedAt.seconds, request.plannedAt.nanos.toLong())
+            },
+            completedAt = request.completedAt?.let {
+                Instant.ofEpochSecond(request.completedAt.seconds, request.completedAt.nanos.toLong())
+            },
+            status =  TodoStatus.valueOf(request.status.name)
         )
-        //send update kafka event
+       // send update kafka event
         TodoKafkaProducer(brokers, jsonMapper).produce(
             topic,
             TodoEvent(
@@ -104,7 +130,7 @@ class TodoService @Inject constructor (
             )
         )
 
-        return ID.newBuilder().setTodoId(todo.todoId).build()
+        return ID.newBuilder().setTodoId(updatedTodo.todoId).build()
     }
 
     override suspend fun deleteTodo(request: ID): ID {
@@ -132,13 +158,41 @@ class TodoService @Inject constructor (
         val todos = repository.listTodosByAuthor(request.authorId)
 
          return todos.map {
-            TodoOuterClass.Todo.newBuilder()
-            .setTodoId(UUID.randomUUID().toString())
-            .setAuthorId(it.authorId)
-            .setTitle(it.title)
-            .setDescription(it.description)
-            .setStatus(TodoOuterClass.Todo.TODO_STATUS.forNumber(it.status))
-            .build()
+             val responseBuilder =  TodoOuterClass.Todo.newBuilder()
+                 .setTodoId(it.todoId)
+                 .setAuthorId(it.authorId)
+                 .setTitle(it.title)
+                 .setDescription(it.description)
+                 .setStatus(TodoOuterClass.Todo.TODO_STATUS.forNumber(it.status.ordinal))
+
+             if (it.updatedAt != null) {
+                 responseBuilder.updatedAt = Timestamp.newBuilder()
+                     .setSeconds(it.updatedAt?.epochSecond!!)
+                     .setNanos(it.updatedAt?.nano!!)
+                     .build()
+             }
+
+             if (it.createdAt != null) {
+                 responseBuilder.createdAt = Timestamp.newBuilder()
+                     .setSeconds(it.createdAt?.epochSecond!!)
+                     .setNanos(it.createdAt?.nano!!)
+                     .build()
+             }
+
+             if (it.plannedAt != null) {
+                 responseBuilder.plannedAt = Timestamp.newBuilder()
+                     .setSeconds(it.plannedAt?.epochSecond!!)
+                     .setNanos(it.plannedAt?.nano!!)
+                     .build()
+             }
+
+             if (it.completedAt != null) {
+                 responseBuilder.completedAt = Timestamp.newBuilder()
+                     .setSeconds(it.completedAt?.epochSecond!!)
+                     .setNanos(it.completedAt?.nano!!)
+                     .build()
+             }
+             responseBuilder.build()
         }.asFlow()
 
     }

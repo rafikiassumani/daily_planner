@@ -25,8 +25,6 @@ dependencies {
         "armeria-jetty9",
         "armeria-kafka",
         "armeria-logback",
-        "armeria-retrofit2",
-        "armeria-rxjava3",
         "armeria-zookeeper3").forEach { implementation("com.linecorp.armeria:${it}:1.22.0") }
 
     implementation("com.google.guava:guava:31.1-jre")

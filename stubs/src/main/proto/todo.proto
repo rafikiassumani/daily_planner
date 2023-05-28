@@ -23,8 +23,8 @@ message Todo {
   string description = 4;
   google.protobuf.Timestamp created_at = 5;
   google.protobuf.Timestamp updated_at = 6;
-  google.protobuf.Timestamp completed_at = 7;
-  google.protobuf.Timestamp planned_at = 8;
+  optional google.protobuf.Timestamp completed_at = 7;
+  optional google.protobuf.Timestamp planned_at = 8;
   enum TODO_STATUS {
       CREATED = 0;
       IN_PROGRESS = 1;

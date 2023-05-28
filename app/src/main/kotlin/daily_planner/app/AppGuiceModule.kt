@@ -3,6 +3,7 @@ package daily_planner.app
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.SerializationFeature
 import com.fasterxml.jackson.databind.util.StdDateFormat
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import com.google.inject.AbstractModule
 import com.google.inject.Provides
@@ -29,7 +30,9 @@ class AppGuiceModule : AbstractModule() {
     fun providesObjectMapper(): ObjectMapper {
         return  ObjectMapper().apply {
             registerKotlinModule()
+            registerModule(JavaTimeModule())
             disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
+            disable(SerializationFeature.FAIL_ON_EMPTY_BEANS)
             dateFormat = StdDateFormat()
         }
     }

@@ -1,25 +1,29 @@
 package daily_planner.app.dao
 
 import daily_planner.stubs.Todo
+import daily_planner.stubs.TodoStatus
 import org.jdbi.v3.sqlobject.config.RegisterBeanMapper
 import org.jdbi.v3.sqlobject.statement.GetGeneratedKeys
 import org.jdbi.v3.sqlobject.statement.SqlQuery
 import org.jdbi.v3.sqlobject.statement.SqlScript
 import org.jdbi.v3.sqlobject.statement.SqlUpdate
+import java.time.Instant
 import java.util.*
 
 interface TodoDao {
     @SqlScript(
         """CREATE EXTENSION IF NOT EXISTS "uuid-ossp""""
     )
+
+    @SqlScript("""CREATE TYPE todo_status AS ENUM ('CREATED', 'IN_PROGRESS', 'COMPLETED')""")
     @SqlScript(
         """ 
         CREATE TABLE todo (
             todo_id uuid DEFAULT uuid_generate_v4 (), 
-            title VARCHAR(255), 
-            description VARCHAR, 
-            author_id VARCHAR(255), 
-            status INT,
+            title VARCHAR(255) NOT NULL, 
+            description VARCHAR NOT NULL, 
+            author_id VARCHAR(255) NOT NULL, 
+            status todo_status NOT NULL,
             completed_at TIMESTAMP,
             planned_at TIMESTAMP,
             updated_at TIMESTAMP,
@@ -57,10 +61,10 @@ interface TodoDao {
         title: String,
         description: String,
         authorId: String?,
-        status: Int,
-        completedAt: Date? = null,
-        plannedAt: Date?,
-        updatedAt: Date? = null,
+        status: TodoStatus,
+        completedAt: Instant? = null,
+        plannedAt: Instant?,
+        updatedAt: Instant? = null,
     ) : Todo
 
     @SqlUpdate(""" 
@@ -81,9 +85,9 @@ interface TodoDao {
         authorId: String,
         title: String,
         description: String,
-        status: Int,
-        completedAt: Date?,
-        plannedAt: Date?,
+        status: TodoStatus,
+        completedAt: Instant?,
+        plannedAt: Instant?,
     ): Todo
 
     @SqlQuery("SELECT * FROM todo where todo_id = :todoId")
@@ -113,6 +117,6 @@ interface TodoDao {
     """)
     fun markTodoAsCompleted(
         todoId: String,
-        status: Int,
+        status: TodoStatus,
     ): Boolean
 }

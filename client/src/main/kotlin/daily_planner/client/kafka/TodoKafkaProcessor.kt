@@ -40,11 +40,11 @@ class TodoKafkaProcessor @Inject constructor(
                 val todoObject = jsonMapper.readValue(it.value(), TodoEvent::class.java)
                 logger.info("======= Start logging todo from kafka consumer ======")
                 logger.info(todoObject.eventType)
-                logger.info(todoObject.todoData.id)
+                logger.info(todoObject.todoData.todoId)
                 logger.info(todoObject.todoData.title)
                 logger.info(todoObject.todoData.description)
                 logger.info(todoObject.todoData.createdAt.toString())
-                logger.info(todoObject.todoData.status)
+                logger.info(todoObject.todoData.status.toString())
                 logger.info("======= End logging todo from kafka consumer ======")
             }
         }

@@ -1,7 +1,9 @@
 package daily_planner.app.dao
 
 import daily_planner.stubs.Todo
+import daily_planner.stubs.TodoStatus
 import org.jdbi.v3.core.Jdbi
+import java.time.Instant
 import java.util.*
 import javax.inject.Named
 
@@ -17,10 +19,10 @@ class TodoRepository(@Named("todoJdbi") private val jdbi : Jdbi ): TodoDao {
         title: String,
         description: String,
         authorId: String?,
-        status: Int,
-        completedAt: Date?,
-        plannedAt: Date?,
-        updatedAt: Date?,
+        status: TodoStatus,
+        completedAt: Instant?,
+        plannedAt: Instant?,
+        updatedAt: Instant?,
     ) : Todo {
         return jdbi.withExtension<Todo, TodoDao, Exception>(TodoDao::class.java) {
             it.createTodo(
@@ -40,9 +42,9 @@ class TodoRepository(@Named("todoJdbi") private val jdbi : Jdbi ): TodoDao {
         authorId: String,
         title: String,
         description: String,
-        status: Int,
-        completedAt: Date?,
-        plannedAt: Date?,
+        status: TodoStatus,
+        completedAt: Instant?,
+        plannedAt: Instant?,
     ): Todo {
         return jdbi.withExtension<Todo, TodoDao, Exception>(TodoDao::class.java) {
             it.updateTodo(
@@ -88,7 +90,7 @@ class TodoRepository(@Named("todoJdbi") private val jdbi : Jdbi ): TodoDao {
         }
     }
 
-    override fun markTodoAsCompleted(todoId: String, status: Int): Boolean {
+    override fun markTodoAsCompleted(todoId: String, status: TodoStatus): Boolean {
         return jdbi.withExtension<Boolean, TodoDao, Exception>(TodoDao::class.java) {
             it.markTodoAsCompleted(
                 todoId,

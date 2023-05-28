@@ -27,8 +27,13 @@ class TodoKafkaProducer @Inject constructor(
 
     suspend fun produce(topic: String, todo: TodoEvent) {
         withContext(Dispatchers.IO) {
-            val todoJson = jsonMapper.writeValueAsString(todo)
-            createProducer().send(ProducerRecord(topic, todoJson)).get()
+            try {
+                val todoJson = jsonMapper.writeValueAsString(todo)
+                createProducer().send(ProducerRecord(topic, todoJson)).get()
+            } catch (e: Exception) {
+                println(e.stackTrace)
+            }
+
         }
     }
 }
