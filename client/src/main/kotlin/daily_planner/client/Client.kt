@@ -11,18 +11,19 @@ import com.linecorp.armeria.server.metric.PrometheusExpositionService
 import daily_planner.client.http.TodoController
 import daily_planner.client.kafka.TodoKafkaProcessor
 import io.micrometer.prometheus.PrometheusMeterRegistry
-import java.sql.Timestamp
-import java.util.*
+import java.time.Instant
 import javax.inject.Inject
 
 class Client @Inject constructor(
     private val kafkaProcessor: TodoKafkaProcessor,
     private val registry: PrometheusMeterRegistry,
-    private val todoController: TodoController
+    private val todoController: TodoController,
 ){
 
     private val healthEndpoint = { _: ServiceRequestContext, _: Request ->
-        HttpResponse.of("http client running ${Timestamp(Date().time)}")
+        HttpResponse.ofJson(object {
+            val message = "http client running ${Instant.now()}"
+        })
     }
     fun processTodos() {
         kafkaProcessor.consume("todos")
@@ -33,7 +34,6 @@ class Client @Inject constructor(
             .meterRegistry(registry)
             .http(port)
             .service("/", healthEndpoint)
-
             .service("/metrics", PrometheusExpositionService.of(registry.prometheusRegistry))
             .annotatedService(todoController)
             .decorator(MetricCollectingService.newDecorator(MeterIdPrefixFunction.ofDefault("daily_planner.http.service")))

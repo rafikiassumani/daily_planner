@@ -2,6 +2,7 @@ package daily_planner.client.http
 
 import com.linecorp.armeria.common.*
 import com.linecorp.armeria.server.annotation.*
+import daily_planner.client.http.converters.JsonResponseConverter
 import daily_planner.client.mappers.TodoMapper
 import daily_planner.client.services.TodoServiceClient
 import daily_planner.stubs.Todo
@@ -28,13 +29,13 @@ class TodoController @Inject constructor(
     }
 
     @Get("/todo/{todoId}")
-    suspend fun getTodo(@Param("todoId") todoId: String): HttpResponse {
+    @ResponseConverter(JsonResponseConverter::class)
+    suspend fun getTodo(@Param("todoId") todoId: String): Todo {
         prometheusRegistry.counter("http.get.todo").increment()
 
         val todo = todoServiceClient.getTodo(todoId)
 
-        val mapTodo = TodoMapper().mapTodo(todo)
-        return HttpResponse.ofJson(mapTodo)
+        return TodoMapper().mapTodo(todo)
     }
 
     @Patch("/todo/{todoId}")
@@ -47,7 +48,6 @@ class TodoController @Inject constructor(
         return HttpResponse.ofJson(object {
             val todoId = todoIdResult.todoId
         })
-
     }
 
     @Delete("/todo/{todoId}")
@@ -63,14 +63,15 @@ class TodoController @Inject constructor(
     }
 
     @Get("/todos/{authorId}")
-    suspend fun getTodos(@Param("authorId") authorId: String): HttpResponse {
+    @ResponseConverter(JsonResponseConverter::class)
+    suspend fun getTodos(@Param("authorId") authorId: String): List<Todo> {
         prometheusRegistry.counter("http.get.all.todos.by.authorId").increment()
 
         val allTodosByAuthor = todoServiceClient.getAllTodosByAuthor(authorId)
-        val ll = allTodosByAuthor.map {
+        val mappedTodosByAuthor = allTodosByAuthor.map {
             TodoMapper().mapTodo(it)
         }.toList()
 
-        return HttpResponse.ofJson(ll)
+        return mappedTodosByAuthor
     }
 }

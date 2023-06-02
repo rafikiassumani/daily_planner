@@ -21,9 +21,10 @@ dependencies {
         "armeria-kotlin",
         "armeria-logback",
         "armeria-retrofit2",
-        "armeria-zookeeper3").forEach { implementation("com.linecorp.armeria:${it}:1.22.0") }
+        "armeria-zookeeper3").forEach { implementation("com.linecorp.armeria:${it}:1.23.1") }
 
     implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.4.0")
+    runtimeOnly("org.jetbrains.kotlinx:kotlinx-serialization-core:1.5.1")
     implementation("org.apache.kafka:kafka-clients:3.4.0")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.14.2")
     implementation("io.micrometer:micrometer-registry-prometheus:1.10.5")
@@ -34,10 +35,7 @@ dependencies {
     implementation("com.google.inject:guice:5.1.0")
 
     //date
-    implementation("com.fasterxml.jackson.datatype:jackson-datatype-jdk8:2.15.1")
-    //implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.15.1")
-    implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.9.5")
-
+    implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.14.2")
 
 }
 

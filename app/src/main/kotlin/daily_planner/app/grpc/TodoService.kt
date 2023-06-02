@@ -6,6 +6,8 @@ import daily_planner.app.dao.TodoRepository
 import daily_planner.app.kafka.TodoKafkaProducer
 import daily_planner.stubs.TodoEvent
 import daily_planner.stubs.TodoStatus
+import daily_planner.stubs.utils.DateUtil.Companion.convertProtoToInstance
+import daily_planner.stubs.utils.DateUtil.Companion.convertToProtoTimestamp
 import io.grpc.Status
 import io.grpc.StatusException
 import io.micrometer.prometheus.PrometheusMeterRegistry
@@ -14,7 +16,6 @@ import kotlinx.coroutines.flow.asFlow
 import todo.app.grpc.TodoOuterClass
 import todo.app.grpc.TodoOuterClass.ID
 import todo.app.grpc.TodoServiceGrpcKt
-import java.time.Instant
 import java.util.*
 import javax.inject.Inject
 
@@ -26,13 +27,6 @@ class TodoService @Inject constructor (
     companion object {
         const val brokers = "localhost:9092"
         const val topic = "todos"
-
-        fun convertProtoToInstance(timestamp: Timestamp) : Instant? {
-            if ( timestamp.seconds == 0L) {
-                return null
-            }
-            return Instant.ofEpochSecond(timestamp.seconds, timestamp.nanos.toLong())
-        }
     }
     override suspend fun createTodo(request: TodoOuterClass.Todo): ID {
         registry.counter("grpc.create.todo").increment()
@@ -70,10 +64,7 @@ class TodoService @Inject constructor (
             .setAuthorId(todo.authorId)
             .setTitle(todo.title)
             .setDescription(todo.description)
-            .setCreatedAt(Timestamp.newBuilder()
-                .setSeconds(todo.createdAt?.epochSecond!!)
-                .setNanos(todo.createdAt?.nano!!)
-                .build())
+            .setCreatedAt(convertToProtoTimestamp(todo.createdAt))
             .setStatus(TodoOuterClass.Todo.TODO_STATUS.forNumber(todo.status.ordinal))
 
          if (todo.updatedAt != null) {
@@ -84,17 +75,11 @@ class TodoService @Inject constructor (
          }
 
         if (todo.plannedAt != null) {
-            response.plannedAt = Timestamp.newBuilder()
-                .setSeconds(todo.plannedAt?.epochSecond!!)
-                .setNanos(todo.plannedAt?.nano!!)
-                .build()
+            response.plannedAt = convertToProtoTimestamp(todo.plannedAt)
         }
 
         if (todo.completedAt != null) {
-            response.completedAt = Timestamp.newBuilder()
-                .setSeconds(todo.completedAt?.epochSecond!!)
-                .setNanos(todo.completedAt?.nano!!)
-                .build()
+            response.completedAt = convertToProtoTimestamp(todo.completedAt)
         }
 
         return response.build()
@@ -113,12 +98,8 @@ class TodoService @Inject constructor (
             title = request.title,
             description = request.description,
             authorId = request.authorId,
-            plannedAt = request.plannedAt?.let {
-                Instant.ofEpochSecond(request.plannedAt.seconds, request.plannedAt.nanos.toLong())
-            },
-            completedAt = request.completedAt?.let {
-                Instant.ofEpochSecond(request.completedAt.seconds, request.completedAt.nanos.toLong())
-            },
+            plannedAt = convertProtoToInstance(request.plannedAt),
+            completedAt = convertProtoToInstance(request.completedAt),
             status =  TodoStatus.valueOf(request.status.name)
         )
        // send update kafka event
@@ -166,31 +147,19 @@ class TodoService @Inject constructor (
                  .setStatus(TodoOuterClass.Todo.TODO_STATUS.forNumber(it.status.ordinal))
 
              if (it.updatedAt != null) {
-                 responseBuilder.updatedAt = Timestamp.newBuilder()
-                     .setSeconds(it.updatedAt?.epochSecond!!)
-                     .setNanos(it.updatedAt?.nano!!)
-                     .build()
+                 responseBuilder.updatedAt = convertToProtoTimestamp(it.updatedAt)
              }
 
              if (it.createdAt != null) {
-                 responseBuilder.createdAt = Timestamp.newBuilder()
-                     .setSeconds(it.createdAt?.epochSecond!!)
-                     .setNanos(it.createdAt?.nano!!)
-                     .build()
+                 responseBuilder.createdAt = convertToProtoTimestamp(it.createdAt)
              }
 
              if (it.plannedAt != null) {
-                 responseBuilder.plannedAt = Timestamp.newBuilder()
-                     .setSeconds(it.plannedAt?.epochSecond!!)
-                     .setNanos(it.plannedAt?.nano!!)
-                     .build()
+                 responseBuilder.plannedAt = convertToProtoTimestamp(it.plannedAt)
              }
 
              if (it.completedAt != null) {
-                 responseBuilder.completedAt = Timestamp.newBuilder()
-                     .setSeconds(it.completedAt?.epochSecond!!)
-                     .setNanos(it.completedAt?.nano!!)
-                     .build()
+                 responseBuilder.completedAt = convertToProtoTimestamp(it.plannedAt)
              }
              responseBuilder.build()
         }.asFlow()

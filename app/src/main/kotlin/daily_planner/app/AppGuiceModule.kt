@@ -28,13 +28,11 @@ class AppGuiceModule : AbstractModule() {
     @Provides
     @Singleton
     fun providesObjectMapper(): ObjectMapper {
-        return  ObjectMapper().apply {
-            registerKotlinModule()
-            registerModule(JavaTimeModule())
-            disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
-            disable(SerializationFeature.FAIL_ON_EMPTY_BEANS)
-            dateFormat = StdDateFormat()
-        }
+        return ObjectMapper()
+            .setDateFormat(StdDateFormat())
+            .registerKotlinModule()
+            .registerModule(JavaTimeModule())
+            .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
     }
 
     @Provides
