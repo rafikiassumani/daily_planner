@@ -24,6 +24,7 @@
             <option value="$PROJECT_DIR$/app" />
             <option value="$PROJECT_DIR$/build-logic" />
             <option value="$PROJECT_DIR$/client" />
+            <option value="$PROJECT_DIR$/kafkaconsumerapp" />
             <option value="$PROJECT_DIR$/stubs" />
           </set>
         </option>

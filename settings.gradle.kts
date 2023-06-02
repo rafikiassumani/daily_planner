@@ -14,4 +14,4 @@ pluginManagement {
 }
 
 rootProject.name = "daily_planner"
-include("app", "stubs", "client")
+include("app", "stubs", "client", "kafkaconsumerapp")

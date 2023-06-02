@@ -1,4 +1,4 @@
-package daily_planner.client
+package daily_planner.kafkaconsumerapp
 
 import com.google.inject.Guice
 import com.linecorp.armeria.common.HttpResponse
@@ -8,20 +8,23 @@ import com.linecorp.armeria.server.Server
 import com.linecorp.armeria.server.ServiceRequestContext
 import com.linecorp.armeria.server.metric.MetricCollectingService
 import com.linecorp.armeria.server.metric.PrometheusExpositionService
-import daily_planner.client.http.TodoController
+import daily_planner.kafkaconsumerapp.kafka.TodoKafkaProcessor
 import io.micrometer.prometheus.PrometheusMeterRegistry
 import java.time.Instant
 import javax.inject.Inject
 
-class Client @Inject constructor(
+class KafkaConsumerMain @Inject constructor(
+    private val kafkaProcessor: TodoKafkaProcessor,
     private val registry: PrometheusMeterRegistry,
-    private val todoController: TodoController,
 ){
 
     private val healthEndpoint = { _: ServiceRequestContext, _: Request ->
         HttpResponse.ofJson(object {
-            val message = "http client running ${Instant.now()}"
+            val message = "kafka consumer app running ${Instant.now()}"
         })
+    }
+    fun processTodos() {
+        kafkaProcessor.consume("todos")
     }
 
     fun buildServer(port: Int): Server {
@@ -30,8 +33,7 @@ class Client @Inject constructor(
             .http(port)
             .service("/", healthEndpoint)
             .service("/metrics", PrometheusExpositionService.of(registry.prometheusRegistry))
-            .annotatedService(todoController)
-            .decorator(MetricCollectingService.newDecorator(MeterIdPrefixFunction.ofDefault("daily_planner.http.service")))
+            .decorator(MetricCollectingService.newDecorator(MeterIdPrefixFunction.ofDefault("daily_planner.kafkaconsumerapp.service")))
             .build()
     }
 
@@ -39,13 +41,15 @@ class Client @Inject constructor(
 
 fun main() {
 
-    println("client class starting for processing messages")
+    println("kafka consumer app starting for processing messages")
     val injector = Guice.createInjector(
-        ClientAppGuiceModule()
+        KafkaConsumerAppGuiceModule()
     )
 
-    val client = injector.getInstance(Client::class.java)
+    val client = injector.getInstance(KafkaConsumerMain::class.java)
     client.buildServer(8081)
         .start()
         .join()
+
+    client.processTodos()
 }

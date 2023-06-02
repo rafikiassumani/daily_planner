@@ -1,7 +1,7 @@
-package daily_planner.client.kafka
+package daily_planner.kafkaconsumerapp.kafka
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import daily_planner.client.ClientAppGuiceModule.KafkaBrokers
+import daily_planner.kafkaconsumerapp.KafkaConsumerAppGuiceModule.KafkaBrokers
 import daily_planner.stubs.TodoEvent
 import io.github.oshai.KLogger
 import org.apache.kafka.clients.consumer.KafkaConsumer
