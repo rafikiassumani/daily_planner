@@ -6,7 +6,7 @@
 
 plugins {
     id("daily_planner.kotlin-library-conventions")
-    kotlin("jvm") version "1.7.10"
+    kotlin("jvm") version "1.8.0"
     application
 }
 
@@ -37,10 +37,16 @@ dependencies {
     //date
     implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.14.2")
 
+    //arrow
+    implementation("io.arrow-kt:arrow-core:1.2.0-RC")
+    implementation("io.arrow-kt:arrow-fx-coroutines:1.2.0-RC")
+    implementation("io.arrow-kt:arrow-integrations-jackson-module:0.14.1")
+
+
 }
 
 java {
-    toolchain.languageVersion.set(JavaLanguageVersion.of(15))
+    toolchain.languageVersion.set(JavaLanguageVersion.of(17))
 }
 repositories {
     mavenCentral()
@@ -48,6 +54,16 @@ repositories {
 
 tasks.withType<JavaCompile> {
     options.compilerArgs.add("-parameters")
+}
+
+tasks.withType<Jar>() {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    manifest {
+        attributes["Main-Class"] = "daily_planner.client.ClientKt"
+    }
+
+    from(sourceSets.main.get().output)
+    from(configurations.runtimeClasspath.get().map { if (it.isDirectory) { it } else { zipTree((it)) }})
 }
 
 application {

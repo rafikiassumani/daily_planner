@@ -6,7 +6,6 @@ import com.google.inject.Provides
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import daily_planner.app.dao.TodoRepository
-import io.github.oshai.KotlinLogging
 import org.jdbi.v3.core.Jdbi
 import org.jdbi.v3.core.kotlin.KotlinPlugin
 import org.jdbi.v3.core.statement.SqlLogger
@@ -23,9 +22,10 @@ class DatabaseGuiceModule : AbstractModule() {
     @Named("todoDataSource")
     private fun createDataSource(): DataSource {
         val config = HikariConfig()
-        config.jdbcUrl = "jdbc:postgresql://localhost:5432/todo-db"
+        //need to fix db name
+        config.jdbcUrl = "jdbc:postgresql://postgres-db:5432/postgres"
         config.username = "postgres"
-        config.password = ""
+        config.password = "password"
         config.addDataSourceProperty("cachePrepStmts", "true")
         config.addDataSourceProperty("prepStmtCacheSize", "250")
         config.addDataSourceProperty("prepStmtCacheSqlLimit", "2048")

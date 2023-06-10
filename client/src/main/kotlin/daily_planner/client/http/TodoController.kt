@@ -1,9 +1,13 @@
 package daily_planner.client.http
 
+import arrow.core.Either
+import arrow.core.left
+import arrow.core.right
 import com.linecorp.armeria.common.*
 import com.linecorp.armeria.server.annotation.*
 import daily_planner.client.http.converters.JsonResponseConverter
 import daily_planner.client.mappers.TodoMapper
+import daily_planner.client.models.Problem
 import daily_planner.client.services.TodoServiceClient
 import daily_planner.stubs.Todo
 import io.micrometer.prometheus.PrometheusMeterRegistry
@@ -30,12 +34,13 @@ class TodoController @Inject constructor(
 
     @Get("/todo/{todoId}")
     @ResponseConverter(JsonResponseConverter::class)
-    suspend fun getTodo(@Param("todoId") todoId: String): Todo {
+    suspend fun getTodo(@Param("todoId") todoId: String): Either<Problem, Todo> {
         prometheusRegistry.counter("http.get.todo").increment()
 
-        val todo = todoServiceClient.getTodo(todoId)
-
-        return TodoMapper().mapTodo(todo)
+        return when (val todo = todoServiceClient.getTodo(todoId)) {
+           is Either.Left -> todo.value.left()
+           is Either.Right -> TodoMapper().mapTodo(todo.value).right()
+        }
     }
 
     @Patch("/todo/{todoId}")

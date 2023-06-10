@@ -25,7 +25,7 @@ class TodoService @Inject constructor (
     private val repository: TodoRepository
 ) : TodoServiceGrpcKt.TodoServiceCoroutineImplBase() {
     companion object {
-        const val brokers = "localhost:9092"
+        const val brokers = "broker-service:9092"
         const val topic = "todos"
     }
     override suspend fun createTodo(request: TodoOuterClass.Todo): ID {

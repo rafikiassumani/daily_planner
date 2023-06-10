@@ -8,7 +8,7 @@ import com.google.protobuf.gradle.id
 
 plugins {
     id("daily_planner.kotlin-library-conventions")
-    kotlin("jvm") version "1.7.10"
+    kotlin("jvm") version "1.8.0"
     id("com.google.protobuf") version "0.9.2"
     //application
 }
@@ -25,7 +25,7 @@ dependencies {
     compileOnly("io.grpc:grpc-stub:1.53.0")
     implementation("io.grpc:grpc-protobuf:1.53.0")
     implementation("com.google.protobuf:protobuf-java-util:3.22.2")
-    api("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4")
+    api("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.1")
     api("com.google.protobuf:protobuf-kotlin:3.22.2")
     api("io.grpc:grpc-kotlin-stub:1.3.0")
     implementation("org.jdbi:jdbi3-kotlin:3.38.0-rc2")

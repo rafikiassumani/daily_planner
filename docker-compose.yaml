@@ -1,0 +1,56 @@
+services:
+  grpc-app:
+    build: ./app
+    ports:
+      - "8080:8080"
+    depends_on:
+       postgres-db:
+         condition: service_healthy
+  client-app:
+    build: ./client
+    ports:
+      - "8081:8081"
+  postgres-db:
+    image: postgres:15.3
+    restart: always
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+    healthcheck:
+      test:  [ "CMD", "pg_isready", "-U", "postgres" ]
+      interval: 1s
+      timeout: 5s
+      retries: 10
+    logging:
+      options:
+        max-size: 10m
+        max-file: "3"
+    ports:
+      - '5433:5432'
+    volumes:
+      # copy the sql script to create tables
+      - ./app/sql/create_tables.sql:/docker-entrypoint-initdb.d/create_tables.sql
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.3.2
+    container_name: zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+
+  broker-service:
+    image: confluentinc/cp-kafka:7.3.2
+    container_name: broker
+    ports:
+      # To learn about configuring Kafka for access across networks see
+      # https://www.confluent.io/blog/kafka-client-cannot-connect-to-broker-on-aws-on-docker-etc/
+      - "9092:9092"
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://broker-service:9092,PLAINTEXT_INTERNAL://broker-service:29092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1

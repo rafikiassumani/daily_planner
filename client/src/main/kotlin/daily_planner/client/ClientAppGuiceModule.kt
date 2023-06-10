@@ -1,5 +1,10 @@
 package daily_planner.client
 
+import arrow.integrations.jackson.module.EitherModuleConfig
+import arrow.integrations.jackson.module.IorModuleConfig
+import arrow.integrations.jackson.module.ValidatedModuleConfig
+import arrow.integrations.jackson.module.registerArrowModule
+import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.util.StdDateFormat
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
@@ -24,6 +29,12 @@ class ClientAppGuiceModule : AbstractModule() {
       return ObjectMapper()
           .registerKotlinModule()
           .registerModule(JavaTimeModule())
+          .registerArrowModule(
+              eitherModuleConfig = EitherModuleConfig("left", "right"),           // sets the field names for either left / right
+              validatedModuleConfig = ValidatedModuleConfig("invalid", "valid"),  // sets the field names for validated invalid / valid
+              iorModuleConfig = IorModuleConfig("left", "right")                  // sets the field names for ior left / right
+          )
+          .setSerializationInclusion(JsonInclude.Include.NON_ABSENT)            // do not serialize None as nulls
           .setDateFormat(StdDateFormat())
           //.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
     }
@@ -33,7 +44,8 @@ class ClientAppGuiceModule : AbstractModule() {
     @Singleton
     fun provideRpcClient(): TodoServiceGrpcKt.TodoServiceCoroutineStub {
         return GrpcClients.newClient(
-            "gproto+http://127.0.0.1:8080/",
+            //need to fix this url as well
+            "gproto+http://grpc-app:8080/",
             TodoServiceGrpcKt.TodoServiceCoroutineStub::class.java
         )
     }

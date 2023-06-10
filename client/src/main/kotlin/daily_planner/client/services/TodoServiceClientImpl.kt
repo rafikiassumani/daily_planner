@@ -1,11 +1,18 @@
 package daily_planner.client.services
 
+import arrow.core.Either
+import arrow.core.left
+import arrow.core.right
 import com.google.protobuf.Timestamp
+import daily_planner.client.models.Problem
+import daily_planner.client.models.ProblemDetails
 import kotlinx.coroutines.flow.Flow
+import org.eclipse.jetty.http.HttpStatus
 import todo.app.grpc.TodoOuterClass.AuthorIdRequest
 import todo.app.grpc.TodoOuterClass.ID
 import todo.app.grpc.TodoOuterClass.Todo
 import todo.app.grpc.TodoServiceGrpcKt.TodoServiceCoroutineStub
+import java.util.UUID
 import javax.inject.Inject
 
 class TodoServiceClientImpl @Inject constructor (
@@ -27,12 +34,21 @@ class TodoServiceClientImpl @Inject constructor (
        return todoGrpcClient.createTodo(req.build())
     }
 
-    override suspend fun getTodo(todoUUID: String): Todo {
+    override suspend fun getTodo(todoUUID: String): Either<Problem, Todo> {
         val todoRequestID = ID.newBuilder().apply {
             todoId = todoUUID
         }.build()
 
-        return todoGrpcClient.getTodo(todoRequestID)
+       val result = try {
+            todoGrpcClient.getTodo(todoRequestID).right()
+        } catch (e: Exception) {
+           ProblemDetails(
+               "Unable to find the todo item",
+                HttpStatus.INTERNAL_SERVER_ERROR_500,
+                UUID.randomUUID().toString(),
+                mutableMapOf()).left()
+        }
+        return result
     }
 
     override suspend fun updateTodo(todo: daily_planner.stubs.Todo): ID {

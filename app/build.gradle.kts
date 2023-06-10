@@ -6,7 +6,7 @@
 
 plugins {
     id("daily_planner.kotlin-application-conventions")
-    kotlin("jvm") version "1.7.10"
+    kotlin("jvm") version "1.8.0"
     application
 }
 
@@ -64,7 +64,7 @@ testing {
         // Configure the built-in test suite
         val test by getting(JvmTestSuite::class) {
             // Use Kotlin Test test framework
-            useKotlinTest("1.7.10")
+            useKotlinTest("1.8.0")
 
             dependencies {
                 // Use newer version of JUnit Engine for Kotlin Test
@@ -77,6 +77,19 @@ testing {
 tasks.withType<JavaCompile> {
     options.compilerArgs.add("-parameters")
 }
+
+
+
+tasks.withType<Jar>() {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    manifest {
+        attributes["Main-Class"] = "daily_planner.app.AppKt"
+    }
+
+    from(sourceSets.main.get().output)
+    from(configurations.runtimeClasspath.get().map { if (it.isDirectory) { it } else { zipTree((it)) }})
+}
+
 
 application {
     // Define the main class for the application.

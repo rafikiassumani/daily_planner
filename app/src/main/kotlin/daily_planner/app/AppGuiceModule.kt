@@ -44,7 +44,8 @@ class AppGuiceModule : AbstractModule() {
     @Provides
     @KafkaBrokers
     fun providesKafkaBrokers(): String {
-        return "localhost:9092"
+        //need to fix this. replace with env variable. it was localhost before
+        return "broker-service:9092"
     }
 
     @Provides
