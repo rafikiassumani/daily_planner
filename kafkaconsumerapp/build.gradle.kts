@@ -6,7 +6,7 @@
 
 plugins {
     id("daily_planner.kotlin-library-conventions")
-    kotlin("jvm") version "1.7.10"
+    kotlin("jvm") version "1.8.0"
     application
 }
 
@@ -38,7 +38,7 @@ dependencies {
 }
 
 java {
-    toolchain.languageVersion.set(JavaLanguageVersion.of(15))
+    toolchain.languageVersion.set(JavaLanguageVersion.of(17))
 }
 repositories {
     mavenCentral()
@@ -48,7 +48,17 @@ tasks.withType<JavaCompile> {
     options.compilerArgs.add("-parameters")
 }
 
+tasks.withType<Jar>() {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    manifest {
+        attributes["Main-Class"] = "daily_planner.kafkaconsumerapp.KafkaConsumerMainKt"
+    }
+
+    from(sourceSets.main.get().output)
+    from(configurations.runtimeClasspath.get().map { if (it.isDirectory) { it } else { zipTree((it)) }})
+}
+
 application {
     // Define the main class for the application.
-    mainClass.set("daily_planner.client.KafkaConsumerMainKt")
+    mainClass.set("daily_planner.kafkaconsumerapp.KafkaConsumerMainKt")
 }

@@ -47,7 +47,7 @@ fun main() {
     )
 
     val client = injector.getInstance(KafkaConsumerMain::class.java)
-    client.buildServer(8081)
+    client.buildServer(8087)
         .start()
         .join()
 

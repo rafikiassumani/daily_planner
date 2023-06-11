@@ -2,24 +2,24 @@
 This a simple todo app written in Kotlin, [armeria](https://armeria.dev/), prostgres, kafka. 
 the app also uses prometheus for metrics. 
 
-## gRPC Service
+## [gRPC Service](app)
 
 This app implements CRUD gRPC (Create, Delete, Update, Get)
 grpc services.
 
-## http client
+## [Http client](client)
 
 the app implements an http controller that calls the gRPC
 services and maps the grpc response to json. 
 
-## kafka consumer
+## [Kafka consumer](kafkaconsumerapp)
 
 the app implements a kafka client consumer that consumes 
 grpc service messages from the `todos` topic. this consumer only logs info.
 
 ## Getting started
 
-### Without docker
+### Without ocker
 
 1. Install java 17+ 
 2. install postgres and use `app/sql/create_tables.sql`to create the tables

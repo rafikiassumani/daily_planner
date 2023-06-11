@@ -10,6 +10,10 @@ services:
     build: ./client
     ports:
       - "8081:8081"
+  kafka-consumer-app:
+    build: ./kafkaconsumerapp
+    ports:
+      - "8087:8087"
   postgres-db:
     image: postgres:15.3
     restart: always
