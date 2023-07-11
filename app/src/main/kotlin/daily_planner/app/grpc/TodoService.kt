@@ -2,6 +2,7 @@ package daily_planner.app.grpc
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.google.protobuf.Timestamp
+import daily_planner.app.AppGuiceModule
 import daily_planner.app.dao.TodoRepository
 import daily_planner.app.kafka.TodoKafkaProducer
 import daily_planner.stubs.TodoEvent
@@ -22,10 +23,10 @@ import javax.inject.Inject
 class TodoService @Inject constructor (
     private val registry: PrometheusMeterRegistry,
     private val jsonMapper: ObjectMapper,
-    private val repository: TodoRepository
+    private val repository: TodoRepository,
+    @AppGuiceModule.KafkaBrokers private val brokers: String,
 ) : TodoServiceGrpcKt.TodoServiceCoroutineImplBase() {
     companion object {
-        const val brokers = "broker-service:9092"
         const val topic = "todos"
     }
     override suspend fun createTodo(request: TodoOuterClass.Todo): ID {

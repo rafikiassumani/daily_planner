@@ -14,6 +14,7 @@ import com.linecorp.armeria.server.ServiceRequestContext
 import com.linecorp.armeria.server.grpc.GrpcService
 import com.linecorp.armeria.server.metric.MetricCollectingService
 import com.linecorp.armeria.server.metric.PrometheusExpositionService
+import daily_planner.app.dao.TodoRepository
 import daily_planner.app.grpc.TodoService
 import daily_planner.app.grpc.UserService
 import io.github.oshai.KotlinLogging
@@ -26,7 +27,8 @@ import javax.inject.Inject
 class App @Inject constructor(
     private val registry: PrometheusMeterRegistry,
     private val todoGrpcService: TodoService,
-    private val userGrpcService: UserService
+    private val userGrpcService: UserService,
+    private val todoRepository: TodoRepository
 ) {
     private val healthEndpoint = { _: ServiceRequestContext, _: Request ->
         HttpResponse.of("http server running ${Timestamp(Date().time)}")
@@ -50,6 +52,10 @@ class App @Inject constructor(
             .build()
     }
 
+        fun hackyTablesCreation() {
+           todoRepository.createTable()
+        }
+
 }
 
 fun main() {
@@ -65,5 +71,7 @@ fun main() {
     val server = app.buildServer(8080)
     server.closeOnJvmShutdown()
     server.start().join()
+    //run migration to replace with flyway db or liquid base
+    app.hackyTablesCreation()
     logger.info("server has started. serving request on port ${server.activeLocalPort()}")
 }

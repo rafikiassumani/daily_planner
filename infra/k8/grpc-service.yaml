@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: todo-grpc-service-deployment
+  labels:
+    app: todo-grpc-app
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: todo-grpc-app
+  template:
+    metadata:
+      labels:
+        app: todo-grpc-app
+    spec:
+      containers:
+        - name: todo-grpc-app
+          image: rafikiass/todo-grpc-service
+          ports:
+            - containerPort: 8080
+          env:
+            - name: DB_SERVICE_NAME_K8
+              value: "postgres-db.default.svc.cluster.local"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: todo-grpc-service
+spec:
+  type: NodePort
+  selector:
+    name: todo-grpc-app
+  ports:
+    - protocol: TCP
+      port: 8080
+      targetPort: 8080

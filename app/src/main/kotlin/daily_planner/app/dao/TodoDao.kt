@@ -18,8 +18,8 @@ interface TodoDao {
     @SqlScript("""CREATE TYPE todo_status AS ENUM ('CREATED', 'IN_PROGRESS', 'COMPLETED')""")
     @SqlScript(
         """ 
-        CREATE TABLE todo (
-            todo_id uuid DEFAULT uuid_generate_v4 (), 
+        CREATE TABLE IF NOT EXISTS todo (
+            todo_id uuid DEFAULT uuid_generate_v4(), 
             title VARCHAR(255) NOT NULL, 
             description VARCHAR NOT NULL, 
             author_id VARCHAR(255) NOT NULL, 

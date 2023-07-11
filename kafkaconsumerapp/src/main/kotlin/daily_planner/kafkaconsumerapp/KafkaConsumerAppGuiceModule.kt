@@ -1,6 +1,7 @@
 package daily_planner.kafkaconsumerapp
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.SerializationFeature
 import com.fasterxml.jackson.databind.util.StdDateFormat
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
@@ -26,7 +27,15 @@ class KafkaConsumerAppGuiceModule : AbstractModule() {
     @Provides
     @KafkaBrokers
     fun providesKafkaBrokers(): String {
-        return "broker-service:9092"
+        return "${getBrokerServiceName()}:9092"
+    }
+
+    private fun getBrokerServiceName(): String {
+        return if (System.getenv("KAFKA_SERVICE_NAME") !== null) {
+            System.getenv("KAFKA_SERVICE_NAME")
+        } else {
+            "localhost"
+        }
     }
 
     @Provides
@@ -36,7 +45,7 @@ class KafkaConsumerAppGuiceModule : AbstractModule() {
           .registerKotlinModule()
           .registerModule(JavaTimeModule())
           .setDateFormat(StdDateFormat())
-          //.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
+          .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
     }
 
     @Provides

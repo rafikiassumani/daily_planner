@@ -23,14 +23,24 @@ class DatabaseGuiceModule : AbstractModule() {
     private fun createDataSource(): DataSource {
         val config = HikariConfig()
         //need to fix db name
-        config.jdbcUrl = "jdbc:postgresql://postgres-db:5432/postgres"
+        config.jdbcUrl = "jdbc:postgresql://${getDatabaseUrl()}:5432/postgres"
         config.username = "postgres"
-        config.password = "password"
+        config.password = "postgres"
         config.addDataSourceProperty("cachePrepStmts", "true")
         config.addDataSourceProperty("prepStmtCacheSize", "250")
         config.addDataSourceProperty("prepStmtCacheSqlLimit", "2048")
 
         return HikariDataSource(config);
+    }
+
+    private fun getDatabaseUrl(): String {
+        return if (System.getenv("DB_SERVICE_NAME") !== null) {
+            System.getenv("DB_SERVICE_NAME")
+        } else if(System.getenv("DB_SERVICE_NAME_K8") !== null)  {
+            System.getenv("DB_SERVICE_NAME_K8")
+        } else {
+            "localhost"
+        }
     }
 
     @Provides

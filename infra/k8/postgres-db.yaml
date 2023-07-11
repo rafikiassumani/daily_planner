@@ -1,0 +1,26 @@
+apiVersion: kubegres.reactive-tech.io/v1
+kind: Kubegres
+metadata:
+  name: postgres-db
+  namespace: default
+
+spec:
+
+  replicas: 3
+  image: postgres:14.1
+
+  database:
+    size: 200Mi
+
+  env:
+    - name: POSTGRES_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: todoapp-postgres-secret
+          key: superUserPassword
+
+    - name: POSTGRES_REPLICATION_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: todoapp-postgres-secret
+          key: replicationUserPassword

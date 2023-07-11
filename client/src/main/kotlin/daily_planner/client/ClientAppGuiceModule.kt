@@ -45,9 +45,17 @@ class ClientAppGuiceModule : AbstractModule() {
     fun provideRpcClient(): TodoServiceGrpcKt.TodoServiceCoroutineStub {
         return GrpcClients.newClient(
             //need to fix this url as well
-            "gproto+http://grpc-app:8080/",
+            "gproto+http://${getServiceName()}:8080/",
             TodoServiceGrpcKt.TodoServiceCoroutineStub::class.java
         )
+    }
+
+    private fun getServiceName(): String {
+        return if (System.getenv("GRPC_SERVICE_NAME") !== null) {
+            System.getenv("GRPC_SERVICE_NAME")
+        } else {
+            "localhost"
+        }
     }
 
     @Provides

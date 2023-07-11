@@ -19,7 +19,7 @@ grpc service messages from the `todos` topic. this consumer only logs info.
 
 ## Getting started
 
-### Without ocker
+### Without docker
 
 1. Install java 17+ 
 2. install postgres and use `app/sql/create_tables.sql`to create the tables
